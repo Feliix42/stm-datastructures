@@ -5,7 +5,6 @@ use std::any::Any;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-use std::iter::FromIterator;
 use stm::{StmResult, TVar, Transaction};
 
 /// A transaction-ready hash set with a configurable but fixed number of buckets.
@@ -48,5 +47,20 @@ where
             // nothing to be inserted, no change to hashset made
             Ok(false)
         }
+    }
+
+    /// Empties the HashSet and returns all elements as `VecDequeue`.
+    ///
+    /// Must be executed as part of a transaction. After calling this function, `self` may be
+    /// dropped, as it is empty.
+    pub fn as_vec(&self, trans: &mut Transaction) -> StmResult<Vec<T>> {
+        let mut result = Vec::new();
+
+        for set in &self.contents {
+            let mut inner_set = set.read(trans)?;
+            result.append(&mut inner_set.drain().collect());
+        }
+
+        Ok(result)
     }
 }
