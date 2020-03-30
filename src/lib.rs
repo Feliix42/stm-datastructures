@@ -3,7 +3,7 @@
 
 use std::any::Any;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use stm::{StmResult, TVar, Transaction};
 
@@ -62,5 +62,45 @@ where
         }
 
         Ok(result)
+    }
+}
+
+/// A transaction-ready hash map with a configurable number of buckets
+#[derive(Clone)]
+pub struct THashMap<K,V> {
+    contents: Vec<TVar<HashMap<K,V>>>,
+}
+
+impl<K, V> THashMap<K, V> where
+    K: Any + Clone + Eq + Hash + Send + Sync,
+    V: Any + Clone + Send + Sync
+{
+    /// Creates a new transaction-ready HashMap with the given number of buckets.
+    pub fn new(bucket_count: usize) -> Self {
+        let mut hs = Vec::with_capacity(bucket_count);
+        for _ in 0..bucket_count {
+            hs.push(TVar::new(HashMap::new()));
+        }
+
+        THashMap { contents: hs }
+    }
+
+    pub fn get_bucket(&self, item: &K) -> &TVar<HashMap<K, V>> {
+        let mut hasher = DefaultHasher::new();
+        item.hash(&mut hasher);
+        let bucket_no: usize = hasher.finish() as usize % self.contents.len();
+
+        &self.contents[bucket_no]
+    }
+
+    pub fn is_empty(&self, trans: &mut Transaction) -> StmResult<bool> {
+        for bucket in &self.contents {
+            let content = bucket.read(trans)?;
+            if !content.is_empty() {
+                return Ok(false)
+            }
+        }
+
+        Ok(true)
     }
 }
