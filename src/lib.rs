@@ -37,15 +37,16 @@ where
         let mut hasher = DefaultHasher::new();
         value.hash(&mut hasher);
         let bucket_no: usize = hasher.finish() as usize % self.contents.len();
-        let mut set = self.contents[bucket_no].read(trans)?;
 
-        if set.insert(value) {
-            // the element was indeed inserted -- write back
-            self.contents[bucket_no].write(trans, set)?;
-            Ok(true)
-        } else {
+        let set_ro = self.contents[bucket_no].read_ref_atomic().downcast::<HashSet<T>>().unwrap();
+
+        if set_ro.contains(&value) {
             // nothing to be inserted, no change to hashset made
             Ok(false)
+        } else {
+            // the element is indeed to be inserted -- write back
+            self.contents[bucket_no].modify(trans, |mut hs| { hs.insert(value); hs })?;
+            Ok(true)
         }
     }
 
