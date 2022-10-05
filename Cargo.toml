@@ -7,4 +7,4 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-stm = { git = "https://github.com/feliix42/rust-stm", rev = "c0f823d3b4dfbf33c483a1785148404bd2a27c6d" }
+stm = { git = "https://github.com/feliix42/rust-stm" }
