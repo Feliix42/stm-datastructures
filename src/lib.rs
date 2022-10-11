@@ -104,4 +104,9 @@ impl<K, V> THashMap<K, V> where
 
         Ok(true)
     }
+
+    pub fn get_contents(&self) -> HashMap<K,V> {
+        self.contents.iter().map(TVar::read_atomic).flatten().collect()
+    }
 }
+
