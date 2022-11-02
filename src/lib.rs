@@ -86,6 +86,22 @@ impl<K, V> THashMap<K, V> where
         THashMap { contents: hs }
     }
 
+    /// Shorthand for more efficient population of a HashMap with data
+    pub fn from_hashmap(map: HashMap<K, V>, bucket_count: usize) -> Self {
+        let estimated_size = map.len() / bucket_count;
+        let mut hs: Vec<HashMap<K, V>> = vec![HashMap::with_capacity(estimated_size); bucket_count];
+
+        for (k, v) in map.into_iter() {
+            let mut hasher = DefaultHasher::new();
+            k.hash(&mut hasher);
+            let bucket_no: usize = hasher.finish() as usize % bucket_count;
+
+            hs[bucket_no].insert(k, v);
+        }
+
+        THashMap { contents: hs.into_iter().map(TVar::new).collect() }
+    }
+
     pub fn get_bucket(&self, item: &K) -> &TVar<HashMap<K, V>> {
         let mut hasher = DefaultHasher::new();
         item.hash(&mut hasher);
